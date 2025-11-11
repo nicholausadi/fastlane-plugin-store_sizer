@@ -5,8 +5,6 @@ module Fastlane
     end
 
     class StoreSizeXcarchiveAction < Action
-      EXTRA_FILE_SIZE = 2_000_000
-
       def self.run(params)
         require 'plist'
 
@@ -23,6 +21,9 @@ module Fastlane
         extra_file_path = File.join(app_path, "extradata_simulated")
         result = {}
 
+        additional_adjustment = params[:size_adjustment] || 0
+        total_additional_size = additional_adjustment
+
         Dir.mktmpdir do |tmp_path|
           binary_backup_path = File.join(tmp_path, binary_name)
           export_path = File.join(tmp_path, "Export")
@@ -33,7 +34,7 @@ module Fastlane
             macho_info = Helper::MachoInfo.new(binary_path)
 
             Helper::StoreSizerHelper.write_random_segments(binary_path, macho_info.encryption_segments)
-            Helper::StoreSizerHelper.write_random_file(extra_file_path, EXTRA_FILE_SIZE)
+            Helper::StoreSizerHelper.write_random_file(extra_file_path, total_additional_size)
 
             export_options = {}
             export_options['method'] = 'ad-hoc'
@@ -104,7 +105,13 @@ module Fastlane
                                        description: 'How should Xcode thin the package? e.g. <none>, <thin-for-all-variants>, or a model identifier for a specific device (e.g. "iPhone7,1")',
                                        default_value: '<thin-for-all-variants>',
                                        optional: true,
-                                       env_name: 'STORE_SIZE_THINNING')
+                                       env_name: 'STORE_SIZE_THINNING'),
+          FastlaneCore::ConfigItem.new(key: :size_adjustment,
+                                       description: 'Additional size adjustment (in bytes) to simulate other app contents',
+                                       default_value: 0.0,
+                                       type: Float,
+                                       optional: true,
+                                       env_name: 'SIZE_ADJUSTMENT')
         ]
       end
 
