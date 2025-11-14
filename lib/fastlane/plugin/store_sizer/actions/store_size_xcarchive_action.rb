@@ -26,7 +26,7 @@ module Fastlane
 
         Dir.mktmpdir do |tmp_path|
           binary_backup_path = File.join(tmp_path, binary_name)
-          export_path = File.join(tmp_path, "Export")
+          export_path = params[:export_path] || File.join(tmp_path, "Export")
           begin
             FileUtils.mv(binary_path, binary_backup_path)
             FileUtils.cp(binary_backup_path, binary_path)
@@ -44,13 +44,30 @@ module Fastlane
             File.write(export_options_plist_path, Plist::Emit.dump(export_options, false))
 
             UI.message("Exporting all variants of #{archive_path} for estimation...")
+            FileUtils.mkdir_p(export_path) unless File.directory?(export_path)
             Helper::StoreSizerHelper.xcode_export_package(archive_path, export_options_plist_path, export_path)
 
             report_txt_path = File.join(export_path, "App Thinning Size Report.txt")
-            UI.verbose(File.read(report_txt_path)) if File.exist?(report_txt_path)
+            if File.exist?(report_txt_path)
+              UI.message("Checking app thinning text report at #{report_txt_path}")
+              UI.verbose(File.read(report_txt_path))
+            else
+              UI.important("App Thinning text report not found at #{report_txt_path}")
+            end
 
-            result = Plist.parse_xml(File.join(export_path, "app-thinning.plist"))
+            plist_path = File.join(export_path, "app-thinning.plist")
+            parsed_plist = {}
+            if File.exist?(plist_path)
+              UI.message("Checking app thinning plist at #{plist_path}")
+              parsed_plist = Plist.parse_xml(plist_path) || {}
+            else
+              UI.important("App thinning plist not found at #{plist_path}, continuing with Mach-O sizes only")
+            end
+            UI.message("Merging app thinning plist into result")
+            result.merge!(parsed_plist)
+            UI.message("Merging mach-o sizes into result")
             result.merge!(macho_info.sizes_info)
+            UI.message("Result size is done")
           ensure
             FileUtils.rm_f(binary_path)
             FileUtils.mv(binary_backup_path, binary_path)
@@ -112,7 +129,11 @@ module Fastlane
                                        default_value: 0.0,
                                        type: Float,
                                        optional: true,
-                                       env_name: 'SIZE_ADJUSTMENT')
+                                       env_name: 'SIZE_ADJUSTMENT'),
+          FastlaneCore::ConfigItem.new(key: :export_path,
+                                       description: 'Custom export directory for -exportArchive output (defaults to a temp folder)',
+                                       optional: true,
+                                       env_name: 'STORE_SIZE_EXPORT_PATH')
         ]
       end
 
