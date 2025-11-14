@@ -6,7 +6,7 @@ require 'fastlane/plugin/store_sizer/version'
 
 Gem::Specification.new do |spec|
   spec.name          = 'fastlane-plugin-store_sizer'
-  spec.version       = '0.2.2'
+  spec.version       = Fastlane::StoreSizer::VERSION
   spec.author        = "Marcelo Oliveira"
   spec.email         = "capyvara@gmail.com"
 
