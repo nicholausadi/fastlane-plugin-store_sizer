@@ -46,7 +46,8 @@ module Fastlane
             UI.message("Exporting all variants of #{archive_path} for estimation...")
             Helper::StoreSizerHelper.xcode_export_package(archive_path, export_options_plist_path, export_path)
 
-            UI.verbose(File.read(File.join(export_path, "App Thinning Size Report.txt")))
+            report_txt_path = File.join(export_path, "App Thinning Size Report.txt")
+            UI.verbose(File.read(report_txt_path)) if File.exist?(report_txt_path)
 
             result = Plist.parse_xml(File.join(export_path, "app-thinning.plist"))
             result.merge!(macho_info.sizes_info)
